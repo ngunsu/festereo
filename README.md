@@ -2,14 +2,17 @@
 
 This is the implementation of our paper"[Fast CNN Stereo Depth Estimation through Embedded GPU Device](https://www.mdpi.com/1424-8220/20/11/3249)"
 
-### Results
+---
+
+## Results
 
 | Model | Dataset | EPE | Err > 3 |
 |:-----:|:-------:|:---:|:-------:|
 | Default| Kitti2012| 1.80 | 0.11 |  
 
+---
 
-### Reproduce results 
+## Reproduce results (Training in Desktop)
 
 ##### Docker 
 
@@ -28,14 +31,39 @@ python cli.py festereo-train --num_workers 16 --max_epochs 300 --min_epochs 200 
 - [Sceneflow checkpoint epoch 19](https://www.dropbox.com/s/a3ry4lqouw7nkhc/sceneflow.ckpt?dl=0)
 - [Kitti2012](https://www.dropbox.com/s/ckdixxrp7kb67b4/kitti2012.ckpt?dl=0)
 
-### TODO
+---
+
+## Reproduce results (Inference in Jetson Jetpack 4.3)
+
+
+#### Install tensorrt
+
+```bash
+sudo apt-get install libprotobuf* protobuf-compiler ninja-build
+git clone https://github.com/ngunsu/torch2trt.git
+cd torch2trt
+sudo python2 setup.py install --plugins
+```
+
+#### Benchmark speed 
+
+```bash
+python model/default.py --benchmark --tensorrt
+```
+For more options python3 model/default.py --help
+
+** TODO: Add cuda kernel **
+
+---
+
+## TODO
 
 - Improve documentation 
 - Add conda support
-- Add fast inference
-- Add Jetson instructions
 
-#### Citation
+---
+
+## Citation
 ```
 @article{Aguilera_2020,
 	doi = {10.3390/s20113249},
