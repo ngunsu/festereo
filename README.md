@@ -42,13 +42,13 @@ python cli.py festereo-train --num_workers 16 --max_epochs 300 --min_epochs 200 
 sudo apt-get install libprotobuf* protobuf-compiler ninja-build
 git clone https://github.com/ngunsu/torch2trt.git
 cd torch2trt
-sudo python2 setup.py install --plugins
+sudo python3 setup.py install --plugins
 ```
 
 #### Benchmark speed 
 
 ```bash
-python model/default.py --benchmark --tensorrt
+python3 model/default.py --benchmark --tensorrt
 ```
 For more options python3 model/default.py --help
 
