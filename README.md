@@ -62,12 +62,14 @@ python3 model/default.py --benchmark --tensorrt
 ```
 For more options python3 model/default.py --help
 
+**Benchmark is not using the custom cuda kernel, so cost volume computation is slow**
 
 ---
 
 ## TODO
 
 - Add conda support
+- Add cuda kernel to benchmark
 - Add batch support for cuda kernel
 
 ---
