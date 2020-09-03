@@ -164,6 +164,9 @@ def main(benchmark, tensorrt, fp16):
     fsa = DefaultModel(max_disp=192).cuda()
     summary(fsa, [(3, 368, 1218), (3, 368, 1218)])
     if benchmark:
+        #from cost_volume import cost_volume
+        #fsa.build_cost_volume = cost_volume
+
         print('Speed benchmark:')
         fsa.eval()
         tt = TorchTimer(times=200, warmup=10)
