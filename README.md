@@ -35,6 +35,16 @@ python cli.py festereo-train --num_workers 16 --max_epochs 300 --min_epochs 200 
 
 ## Reproduce results (Inference in Jetson Jetpack 4.3)
 
+#### Install Pytorch 1.3
+
+Follow instructions from [link](https://forums.developer.nvidia.com/t/pytorch-for-jetson-version-1-6-0-now-available/72048)
+
+#### Install Python requirements
+
+```
+pip3 install -r requirements.txt
+```
+
 
 #### Install tensorrt
 
@@ -58,7 +68,6 @@ For more options python3 model/default.py --help
 
 ## TODO
 
-- Improve documentation 
 - Add conda support
 
 ---
