@@ -8,6 +8,7 @@ from model.unet_parts import NConv, Down, Up
 import math
 from torchsummary import summary
 import click
+from utils.torch_timer import TorchTimer
 
 
 class disparityregression(nn.Module):
@@ -155,10 +156,76 @@ class DefaultModel(nn.Module):
 
 
 @click.command()
-def main():
+@click.option('--benchmark/--no-benchmark', default=False, help='Benchmark speed')
+@click.option('--tensorrt/--no-tensorrt', default=False, help='Use tensorrt for benchmark')
+@click.option('--fp16/--no-fp16', default=False, help='fp16')
+def main(benchmark, tensorrt, fp16):
     # Print summary
     fsa = DefaultModel(max_disp=192).cuda()
     summary(fsa, [(3, 368, 1218), (3, 368, 1218)])
+    if benchmark:
+        print('Speed benchmark:')
+        fsa.eval()
+        tt = TorchTimer(times=200, warmup=10)
+        torch.backends.cudnn.benchmark = True
+
+        from torchvision import transforms
+        # Data preparation
+        mean = [0.0, 0.0, 0.0]
+        std = [1.0, 1.0, 1.0]
+        transform = transforms.Compose([transforms.ToTensor(),
+                                        transforms.Normalize(mean, std)])
+
+        left, right = torch.rand((3, 368, 1218)), torch.rand((3, 368, 1218)) 
+        left = left.unsqueeze(0).cuda()
+        right = right.unsqueeze(0).cuda()
+        left_and_right = torch.cat((left, right), 0)
+
+        if fp16:
+            left_and_right = left_and_right.half()
+            left = left.half()
+            right = right.half()
+            fsa = fsa.half()
+
+        if tensorrt:
+            from torch2trt import torch2trt
+            fsa.feature_network = torch2trt(fsa.feature_network, [left_and_right],
+                                            fp16_mode=fp16, max_batch_size=2)
+            feats = fsa.feature_network(left_and_right)
+            l_feat = feats[0:1, :, :, :]
+            r_feat = feats[1:2, :, :, :]
+            cost = fsa.build_cost_volume(l_feat, r_feat)
+            fsa.cost_post = torch2trt(fsa.cost_post, [cost],
+                                      fp16_mode=fp16, max_batch_size=1)
+
+        with torch.no_grad():
+
+            # Full network
+            full_mean, full_std, _ = tt.run(fsa, left, right)
+            print(f'Full network elapsed mean time {full_mean:0.8f} s with std {full_std: 0.8f} s')
+            print()
+
+            # Convs
+            conv_mean, conv_std, feats = tt.run(fsa.feature_network, left_and_right)
+            print(f'Feature Conv elapsed mean time {conv_mean:0.8f} s with std {conv_std: 0.8f} s')
+
+            # Cost volume
+            l_feat = feats[0:1, :, :, :]
+            r_feat = feats[1:2, :, :, :]
+            cost_mean, cost_std, cost = tt.run(fsa.build_cost_volume, l_feat, r_feat)
+            print(f'Cost elapsed mean time {cost_mean:0.8f} s with std {cost_std: 0.8f} s')
+
+            # Post cost
+            post_cost_mean, post_cost_std, proccesed_cost = tt.run(fsa.cost_post, cost)
+            print(f'Post Cost elapsed mean time {post_cost_mean:0.8f} s with std {post_cost_std: 0.8f} s')
+
+            # Regression
+            r_mean, r_std, out = tt.run(fsa.regression, cost, left)
+            print(f'Regression elapsed mean time {r_mean:0.8f} s with std {r_std: 0.8f} s')
+
+            # Total time by parts
+            total = conv_mean + cost_mean + post_cost_mean + r_mean
+            print(f'Total summing means {total}')
 
 
 if __name__ == "__main__":
