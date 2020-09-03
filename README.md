@@ -62,13 +62,13 @@ python3 model/default.py --benchmark --tensorrt
 ```
 For more options python3 model/default.py --help
 
-** TODO: Add cuda kernel **
 
 ---
 
 ## TODO
 
 - Add conda support
+- Add batch support for cuda kernel
 
 ---
 
