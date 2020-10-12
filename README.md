@@ -14,7 +14,7 @@ This is the implementation of our paper"[Fast CNN Stereo Depth Estimation throug
 
 ## Reproduce results (Training in Desktop)
 
-##### Docker 
+##### Docker (training on x64 arch)
 
 ```bash
 ./docker/launch.sh
@@ -55,22 +55,20 @@ cd torch2trt
 sudo python3 setup.py install --plugins
 ```
 
+#### Install cuda kernel 
+
+```bash
+cd cuda && python3 setup.py install -user
+```
+
 #### Benchmark speed 
 
 ```bash
+sudo nvpmodel -m 0 && sudo jetson_clocks
 python3 model/default.py --benchmark --tensorrt
 ```
+
 For more options python3 model/default.py --help
-
-**Benchmark is not using the custom cuda kernel, so cost volume computation is slow**
-
----
-
-## TODO
-
-- Add conda support
-- Add cuda kernel to benchmark
-- Add batch support for cuda kernel
 
 ---
 

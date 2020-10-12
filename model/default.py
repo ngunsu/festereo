@@ -9,6 +9,10 @@ import math
 from torchsummary import summary
 import click
 from utils.torch_timer import TorchTimer
+try:
+    from cost_volume import cost_volume
+except e:
+    pass
 
 
 class disparityregression(nn.Module):
@@ -75,7 +79,7 @@ class PostFeatureNetwork(nn.Module):
 
 class DefaultModel(nn.Module):
 
-    def __init__(self, max_disp=192):
+    def __init__(self, max_disp=192, cuda_kernel=False):
         super(DefaultModel, self).__init__()
 
         self.levels = 3
@@ -84,6 +88,7 @@ class DefaultModel(nn.Module):
         self.channels_3d = 4
         self.growth_rate = [4, 1, 1]
         self.block_size = 2
+        self.cuda_kernel = cuda_kernel
         self.max_disp = max_disp // 2**(self.levels)
 
         self.feature_network = FeatureNetwork(init_channels=self.init_channels,
@@ -144,7 +149,13 @@ class DefaultModel(nn.Module):
         r_feat = feats[bs:bs * 2, :, :, :]
 
         # Cost volume pre
-        cost = self.build_cost_volume(l_feat, r_feat)
+        if self.cuda_kernel:
+            new_l_feat = l_feat.squeeze(0)
+            new_r_feat = r_feat.squeeze(0)
+            cost = cost_volume(new_l_feat, new_r_feat, self.max_disp)
+            cost = cost.unsqueeze(0)
+        else:
+            cost = self.build_cost_volume(l_feat, r_feat)
 
         # Cost volume post processing
         cost = self.cost_post(cost)
@@ -161,9 +172,10 @@ class DefaultModel(nn.Module):
 @click.option('--fp16/--no-fp16', default=False, help='fp16')
 def main(benchmark, tensorrt, fp16):
     # Print summary
-    fsa = DefaultModel(max_disp=192).cuda()
+    fsa = DefaultModel(max_disp=192, cuda_kernel=False).cuda()
     summary(fsa, [(3, 368, 1218), (3, 368, 1218)])
     if benchmark:
+        fsa = DefaultModel(max_disp=192, cuda_kernel=True).cuda()
         #from cost_volume import cost_volume
         #fsa.build_cost_volume = cost_volume
 
@@ -215,7 +227,10 @@ def main(benchmark, tensorrt, fp16):
             # Cost volume
             l_feat = feats[0:1, :, :, :]
             r_feat = feats[1:2, :, :, :]
-            cost_mean, cost_std, cost = tt.run(fsa.build_cost_volume, l_feat, r_feat)
+            l_feat.squeeze_(0)
+            r_feat.squeeze_(0)
+            cost_mean, cost_std, cost = tt.run(cost_volume, l_feat, r_feat, fsa.max_disp)
+            cost.unsqueeze_(0)
             print(f'Cost elapsed mean time {cost_mean:0.8f} s with std {cost_std: 0.8f} s')
 
             # Post cost
