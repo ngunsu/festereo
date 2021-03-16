@@ -58,7 +58,7 @@ sudo python3 setup.py install --plugins
 #### Install cuda kernel 
 
 ```bash
-cd cuda && python3 setup.py install -user
+cd cuda && python3 setup.py install --user
 ```
 
 #### Benchmark speed 
